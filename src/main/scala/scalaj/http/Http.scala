@@ -408,6 +408,10 @@ case class HttpRequest(
     } else None).getOrElse {
       // HttpURLConnection won't redirect from https <-> http, so we handle manually here
       (if (conn.getInstanceFollowRedirects && (responseCode == 301 || responseCode == 302 || responseCode == 307)) {
+        val reqCks = this.headers.filter(_._1.equals("Cookie")).map(_._2).flatMap(HttpCookie.parse(_).asScala)
+        val respCks = headers("Set-Cookie").flatMap(HttpCookie.parse(_).asScala)
+        // Add the response cookies to this request in order to perform new request.
+        this.cookies(reqCks ++ respCks)
         headers.get("Location").flatMap(_.headOption).map(location => {
           doConnection(parser, new URL(location), connectFunc)
         })
